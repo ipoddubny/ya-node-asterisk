@@ -74,7 +74,7 @@ function AMI(port, host, login, password, events) {
                 // Split into array and drop "END COMMAND" line
                 nicemsg.CMD = line.split('\n').slice(0, -1);
             } else {
-                res = line.match(/(.*?):\W*(.*)/);
+                res = line.match(/(.*?):\s*(.*)/);
                 property = res[1];
                 value = res[2];
                 if (typeof nicemsg[property] === 'undefined') {
