@@ -1,7 +1,13 @@
 "use strict";
-var AMI = require('./ami').AMI,
+var AMI = require('./ami'),
     util = require('util'),
-    ami = new AMI(5038, 'localhost', 'login', 'secret', 'on');
+    ami = new AMI({
+      "port":       5038,
+      "host":       'localhost',
+      "login":      'login',
+      "password":   'secret',
+      "events":     'on'
+    });
 
 function print_res(res) {
     util.log('response to action: ' + util.inspect(res));

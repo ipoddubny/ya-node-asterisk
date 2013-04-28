@@ -20,15 +20,16 @@ function setup_message_socket(self) {
     });
 }
 
-function AMI(port, host, login, password, events) {
-    if (!(this instanceof AMI)) { return new AMI(port, host, login, password, events); }
+function AMI(params) {
+    if (!(this instanceof AMI)) { return new AMI(params); }
     EventEmitter.call(this);
 
-    this.port = port;
-    this.host = host;
-    this.login = login;
-    this.password = password;
-    this.events = events;
+    this.port = params.port;
+    this.host = params.host;
+    this.login = params.login;
+    this.password = params.password;
+    this.events = params.events;
+
     this.socket = new LineSocket();
     this.pending_actions = {};
 
@@ -166,5 +167,5 @@ AMI.prototype.disconnect = function () {
 };
 
 
-module.exports.AMI = AMI;
+module.exports = AMI;
 // vim: ts=4 sw=4 et si

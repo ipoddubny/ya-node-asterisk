@@ -1,0 +1,19 @@
+{
+  "name": "yana",
+  "description": "Yet another Asterisk AMI library",
+  "version": "0.1.0",
+  "keywords": [
+    "asterisk",
+    "ami"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/ipoddubny/ya-node-asterisk"
+  },
+  "bugs": {
+    "url": "http://github.com/ipoddubny/ya-node-asterisk/issues"
+  },
+  "author": "Ivan Poddubny <ivan.poddubny@gmail.com>",
+  "main": "ami.js",
+  "license": "MIT"
+}

@@ -1,13 +1,26 @@
-# Yet Another Node.js Asterisk AMI Library
+# Yana
 
-Yet another little library for using Asterisk Manager Interface from node.js.
+Yana is yet another node.js library for Asterisk Manager Interface.
 
 Tested on Asterisk versions from 1.6.0 up to 11.
 
-This is just a first pre-alpha version so the API may be a subject to change.
+The library is still in early stage so the API may be a subject to change.
+
+## Installation
+Install with npm: `npm install yana`
 
 ## API
-Connecting is as simple as this: `new require(./ami).AMI(port, host, login, secret, events)`.
+Connecting is as simple as this:
+```js
+var AMI = require('yana'),
+    ami = new AMI({
+      'port': 5038,
+      'host': 'example.com',
+      'login': 'login',
+      'password': secret,
+      'events': 'on'
+    });
+```
 
 AMI is an EventEmitter and so it emits events of a few kinds:
  * 'connect' fires upon successful login
@@ -19,9 +32,16 @@ UserEvents also trigger events like 'UserEvent-EventName'.
 For thorough documentation on available AMI commands check [Asterisk Wiki](https://wiki.asterisk.org/wiki/display/AST/AMI+Actions).
 
 ## Example:
+```js
     var util = require('util'),
-        AMI = require('./ami').AMI,
-        ami = new AMI(5038, 'localhost', 'login', 'secret', 'on');
+        AMI = require('yana'),
+        ami = new AMI({
+            'port': 5038,
+            'host': 'localhost',
+            'login': 'login',
+            'password': 'secret',
+            'events': 'on'
+        });
 
     ami.on('connect', function () {
         console.log('Connected');
@@ -42,10 +62,11 @@ For thorough documentation on available AMI commands check [Asterisk Wiki](https
             process.exit(0);
         }, 5000);
     });
+```
 
 ## License
 
-Copyright (c) 2013 Ivan Poddubny
+Copyright (c) Ivan Poddubny
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
