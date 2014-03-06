@@ -2,7 +2,7 @@
 
 Yana is yet another node.js library for Asterisk Manager Interface.
 
-Tested on Asterisk versions from 1.6.0 up to 11.
+Tested on Asterisk versions from 1.6.0 up to 12.
 
 The library is still in early stage so the API may be a subject to change.
 
@@ -14,11 +14,11 @@ Connecting is as simple as this:
 ```js
 var AMI = require('yana'),
     ami = new AMI({
-      'port': 5038,
-      'host': 'example.com',
-      'login': 'login',
-      'password': secret,
-      'events': 'on'
+      port: 5038,
+      host: 'example.com',
+      login: 'login',
+      password: secret,
+      events: 'on'
     });
 ```
 
@@ -33,36 +33,38 @@ For thorough documentation on available AMI commands check [Asterisk Wiki](https
 
 ## Example:
 ```js
-    var util = require('util'),
-        AMI = require('yana'),
-        ami = new AMI({
-            'port': 5038,
-            'host': 'localhost',
-            'login': 'login',
-            'password': 'secret',
-            'events': 'on'
-        });
-
-    ami.on('connect', function () {
-        console.log('Connected');
+var util = require('util'),
+    AMI = require('yana'),
+    ami = new AMI({
+        port: 5038,
+        host: 'localhost',
+        login: 'login',
+        password: 'secret',
+        events: 'on'
     });
 
-    ami.on('error', function(err) {
-        console.log('An error occured: ' + err);
-    });
+ami.on('connect', function () {
+    console.log('Connected');
+});
 
-    ami.on('FullyBooted', function (event) {
-        console.log('Ready');
-        ami.send({Action: 'ListCommands'}, function (res) {
-            console.log(util.inspect(res));
-        });
-        setTimeout(function () {
-            console.log('Disconnecting...');
-            ami.disconnect();
-            process.exit(0);
-        }, 5000);
+ami.on('error', function(err) {
+    console.log('An error occured: ' + err);
+});
+
+ami.on('FullyBooted', function (event) {
+    console.log('Ready');
+    ami.send({Action: 'ListCommands'}, function (res) {
+        console.log(util.inspect(res));
     });
+    setTimeout(function () {
+        console.log('Disconnecting...');
+        ami.disconnect();
+        process.exit(0);
+    }, 5000);
+});
 ```
+
+Look at example.js for more exaples.
 
 ## License
 

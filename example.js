@@ -2,11 +2,11 @@
 var AMI = require('./ami'),
     util = require('util'),
     ami = new AMI({
-      "port":       5038,
-      "host":       'localhost',
-      "login":      'login',
-      "password":   'secret',
-      "events":     'on'
+      port: 5038,
+      host: 'localhost',
+      login: 'login',
+      password: 'secret',
+      events: 'on'
     });
 
 function print_res(res) {
@@ -20,7 +20,7 @@ ami.on('connect', function () {
 
 ami.on('error', function (e) {
     util.log("Fatal error: " + e);
-    process.exit(0);
+    process.exit(255);
 });
 
 ami.on('FullyBooted', function () {
