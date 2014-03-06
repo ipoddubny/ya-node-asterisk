@@ -38,7 +38,7 @@ function AMI(params) {
     function on_first_line(line) {
         var version,
             loginmsg;
-        version = line.match(/Asterisk Call Manager\/(1\.[0123])/);
+        version = line.match(/Asterisk Call Manager\/([12]\.[0123])/);
         if (version) {
             self.version = version[1];
             debug('successfully connected to AMI');
