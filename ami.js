@@ -101,7 +101,7 @@ function AMI(params) {
     });
 
     // give Asterisk some time to respond, then forget about it
-    setInterval(function () {
+    this.cleanerTimer = setInterval(function () {
         var i, token;
         for (i in self.pending_actions) {
             token = self.pending_actions[i];
@@ -122,6 +122,7 @@ function AMI(params) {
 
     this.socket.on('end', function () {
         self.emit('error', 'Connection closed');
+        clearInterval(self.cleanerTimer);
     });
 
     this.socket.connect(this.port, this.host);
