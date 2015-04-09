@@ -10,38 +10,64 @@ The library is still in early stage so the API may be a subject to change.
 Install with npm: `npm install yana`
 
 ## API
-Connecting is as simple as this:
+
+### Creating a new connection
+
 ```js
-var AMI = require('yana'),
-    ami = new AMI({
-      port: 5038,
-      host: 'example.com',
-      login: 'login',
-      password: secret,
-      events: 'on'
-    });
+var AMI = require('yana');
+
+var ami = new AMI({
+    port: 5038,
+    host: 'example.com',
+    login: 'login',
+    password: secret,
+    events: 'on',
+    reconnect: true
+});
 ```
 
-AMI is an EventEmitter and so it emits events of a few kinds:
- * 'connect' fires upon successful login
- * 'error' fires on any connection related errors
- * 'event' fires on every event sent by Asterisk
-It is possible to suscribe to specific Asterisk events by their names like 'FullyBooted' or 'PeerStatus'.
-UserEvents also trigger events like 'UserEvent-EventName'.
+Parameters:
 
-For thorough documentation on available AMI commands check [Asterisk Wiki](https://wiki.asterisk.org/wiki/display/AST/AMI+Actions).
+ * ``host`` (optional, default: 'localhost'): host the client connects to
+ * ``port`` (optional, default: 5038): port the client connects to
+ * ``login``: AMI user login
+ * ``password``: AMI user password
+ * ``events`` (optional, default: 'on'): 'on' or 'off', subscribe to AMI events or not
+ * ``reconnect`` (optional, default: false) automatically reconnect on connection errors
+
+### Disconnecting
+
+```
+ami.disconnect([callback]);
+```
+
+Parameters:
+
+ * ``callback`` (optional)
+
+
+### Events
+
+AMI is an EventEmitter with the following events:
+ * 'connect' emitted when the client has successfully logged in
+ * 'error' emitted on unrecoverable errors (connection errors with reconnect turned off, unknown protocol, incorrect login)
+ * 'disconnect' is only emitted in reconnection mode when the client loses connection
+ * 'reconnect' is emitted on successful reconnection
+ * 'event' fires on every event sent by Asterisk
+ * all events received from Asterisk are passed trasparently, you can subsribe to events by their names, eg. 'FullyBooted' or 'PeerStatus'
+ * UserEvents also trigger events like 'UserEvent-EventName', where EventName is specivied in UserEvent header of AMI message
+
+For thorough documentation on available AMI commands see [Asterisk Wiki](https://wiki.asterisk.org/wiki/display/AST/AMI+Actions).
 
 ## Example:
 ```js
-var util = require('util'),
-    AMI = require('yana'),
-    ami = new AMI({
-        port: 5038,
-        host: 'localhost',
-        login: 'login',
-        password: 'secret',
-        events: 'on'
-    });
+var util = require('util');
+var AMI = require('yana');
+
+var ami = new AMI({
+    login: 'login',
+    password: 'secret'
+});
 
 ami.on('connect', function () {
     console.log('Connected');
@@ -58,21 +84,15 @@ ami.on('FullyBooted', function (event) {
     });
     setTimeout(function () {
         console.log('Disconnecting...');
-        ami.disconnect();
-        process.exit(0);
+        ami.disconnect(function () {
+            process.exit(0);
+        });
     }, 5000);
 });
 ```
 
-Look at example.js for more exaples.
+Look at example.js for more examples.
 
 ## License
 
-Copyright (c) Ivan Poddubny
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
+MIT

@@ -1,7 +1,7 @@
 {
   "name": "yana",
   "description": "Yet another Asterisk AMI library",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "keywords": [
     "asterisk",
     "ami"
