@@ -172,7 +172,7 @@ AMI.prototype._processMessage = function _processMessage (msg) {
             if (typeof nicemsg[property] === 'undefined') {
                 nicemsg[property] = value;
             } else if (util.isArray(nicemsg[property])) {
-                nicemsg.push(value);
+                nicemsg[property].push(value);
             } else {
                 // arrayify
                 nicemsg[property] = [nicemsg[property], value];
