@@ -94,7 +94,7 @@ AMI.prototype._onFirstLine = function _onFirstLine (line) {
 
     var self = this;
 
-    var version = line.match(/Asterisk Call Manager\/([12]\.[01234])/);
+    var version = line.match(/Asterisk Call Manager\/(\S+)/);
     if (version) {
         self.version = version[1];
 
