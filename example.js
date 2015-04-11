@@ -7,7 +7,7 @@ var ami = new AMI({
     host: 'localhost',
     login: 'login',
     password: 'secret',
-    events: 'on'
+    events: true
 });
 
 function print_res(res) {

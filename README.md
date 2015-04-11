@@ -21,7 +21,7 @@ var ami = new AMI({
     host: 'example.com',
     login: 'login',
     password: secret,
-    events: 'on',
+    events: true,
     reconnect: true
 });
 ```
@@ -32,7 +32,7 @@ Parameters:
  * ``port`` (optional, default: 5038): port the client connects to
  * ``login``: AMI user login
  * ``password``: AMI user password
- * ``events`` (optional, default: 'on'): 'on' or 'off', subscribe to AMI events or not
+ * ``events`` (optional, default: true): set to false to not receive AMI events
  * ``reconnect`` (optional, default: false) automatically reconnect on connection errors
 
 ### Disconnecting

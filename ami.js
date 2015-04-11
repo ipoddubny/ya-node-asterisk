@@ -110,11 +110,13 @@ AMI.prototype._onFirstLine = function _onFirstLine (line) {
 
     self._setupMessageBuffering();
 
+    var eventsOff = self.options.events === false || self.options.events === 'off';
+
     self._send({
         Action : 'Login',
         Username : self.options.login,
         Secret : self.options.password,
-        Events: self.options.events || 'off'
+        Events: (eventsOff ? 'off' : 'on')
     }, function (res) {
 
         if (res.Response === 'Success') {
