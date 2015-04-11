@@ -1,13 +1,14 @@
-"use strict";
-var AMI = require('./ami'),
-    util = require('util'),
-    ami = new AMI({
-      port: 5038,
-      host: 'localhost',
-      login: 'login',
-      password: 'secret',
-      events: 'on'
-    });
+'use strict';
+var AMI = require('./ami');
+var util = require('util');
+
+var ami = new AMI({
+    port: 5038,
+    host: 'localhost',
+    login: 'login',
+    password: 'secret',
+    events: 'on'
+});
 
 function print_res(res) {
     util.log('response to action: ' + util.inspect(res));
@@ -19,7 +20,7 @@ ami.on('connect', function () {
 });
 
 ami.on('error', function (e) {
-    util.log("Fatal error: " + e);
+    util.log('Fatal error: ' + e);
     process.exit(255);
 });
 

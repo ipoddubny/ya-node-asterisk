@@ -1,5 +1,5 @@
 /* jshint node:true */
-"use strict";
+'use strict';
 var net = require('net');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
@@ -54,6 +54,7 @@ AMI.prototype._connect = function _connect () {
     self.socket.connect(self.options.port || 5038, self.options.host || 'localhost');
 };
 
+
 AMI.prototype._socketError = function _socketError (msg) {
 
     var self = this;
@@ -80,6 +81,7 @@ AMI.prototype._socketError = function _socketError (msg) {
         if (self._backoffTimeout > RECONNECT_MAX_DELAY) {
             self._backoffTimeout = RECONNECT_MAX_DELAY;
         }
+
         self._reconnectTimeout = setTimeout(function () {
 
             delete self._reconnectTimeout;
@@ -90,46 +92,48 @@ AMI.prototype._socketError = function _socketError (msg) {
     }
 };
 
+
 AMI.prototype._onFirstLine = function _onFirstLine (line) {
 
     var self = this;
 
     var version = line.match(/Asterisk Call Manager\/(\S+)/);
-    if (version) {
-        self.version = version[1];
-
-        self.status = ST_CONNECTED;
-
-        self._setupMessageBuffering();
-
-        self._send({
-            Action : 'Login',
-            Username : self.options.login,
-            Secret : self.options.password,
-            Events: self.options.events || 'off'
-        }, function (res) {
-
-            if (res.Response === "Success") {
-
-                self._setPeriodicCleanup();
-                self.status = ST_AUTHORIZED;
-                if (self.reconnectCounter === 0) {
-                    self.emit('connect');
-                } else {
-                    self.emit('reconnect');
-                }
-
-                self.reconnectCounter++;
-            } else {
-                self.status = ST_DISCONNECTED;
-                self.emit('error', res.Message);
-            }
-        });
-    } else {
+    if (!version) {
         self.socket.destroy();
         self.emit('error', 'Connection Error: server replied with unknown signature');
+        return;
     }
+
+    self.version = version[1];
+
+    self.status = ST_CONNECTED;
+
+    self._setupMessageBuffering();
+
+    self._send({
+        Action : 'Login',
+        Username : self.options.login,
+        Secret : self.options.password,
+        Events: self.options.events || 'off'
+    }, function (res) {
+
+        if (res.Response === 'Success') {
+            self._setPeriodicCleanup();
+            self.status = ST_AUTHORIZED;
+            if (self.reconnectCounter === 0) {
+                self.emit('connect');
+            } else {
+                self.emit('reconnect');
+            }
+
+            self.reconnectCounter++;
+        } else {
+            self.status = ST_DISCONNECTED;
+            self.emit('error', res.Message);
+        }
+    });
 };
+
 
 AMI.prototype._setupMessageBuffering = function _setupMessageBuffering () {
 
@@ -142,6 +146,7 @@ AMI.prototype._setupMessageBuffering = function _setupMessageBuffering () {
             if (buffer.length) {
                 self._processMessage(buffer);
             }
+
             buffer = [];
         } else {
             buffer.push(line);
@@ -149,49 +154,54 @@ AMI.prototype._setupMessageBuffering = function _setupMessageBuffering () {
     });
 };
 
-AMI.prototype._processMessage = function _processMessage (msg) {
+
+AMI.prototype._processMessage = function _processMessage (rawMsg) {
 
     var self = this;
 
-    var nicemsg = {};
-    msg.forEach(function (line) {
+    var objMsg = {};
+    rawMsg.forEach(function (line) {
 
         if (line.match(/--END COMMAND--$/)) {
-            // Response to 'Command' action emits the last line without colon
-            // Split into array and drop "END COMMAND" line
-            nicemsg.CMD = line.split('\n').slice(0, -1);
-        } else {
-            var res = line.match(/(.+?):\s*(.*)/);
-            if (!res) {
-                // ignore the wrong lines (e.g. for actions like Queues)
-                return;
-            }
-            var property = res[1];
-            var value = res[2];
+            // The Command action returns a non-standard response
+            // Split into array and drop the last line containing "END COMMAND"
+            objMsg.CMD = line.split('\n').slice(0, -1);
+            return;
+        }
 
-            if (typeof nicemsg[property] === 'undefined') {
-                nicemsg[property] = value;
-            } else if (util.isArray(nicemsg[property])) {
-                nicemsg[property].push(value);
-            } else {
-                // arrayify
-                nicemsg[property] = [nicemsg[property], value];
-            }
+        var res = line.match(/(.+?):\s*(.*)/);
+        if (!res) {
+            // ignore invalid lines (e.g. for actions like Queues)
+            return;
+        }
+
+        var property = res[1];
+        var value = res[2];
+
+        if (!(property in objMsg)) {
+            objMsg[property] = value;
+        } else if (util.isArray(objMsg[property])) {
+            objMsg[property].push(value);
+        } else {
+            // arrayify
+            objMsg[property] = [objMsg[property], value];
         }
     });
 
-    if (nicemsg.Event) {
-        self.emit('event', nicemsg);
-        self.emit(nicemsg.Event, nicemsg);
-        if (nicemsg.Event === 'UserEvent') {
-            self.emit('UserEvent-' + nicemsg.UserEvent, nicemsg);
+    if (objMsg.Event) {
+        self.emit('event', objMsg);
+        self.emit(objMsg.Event, objMsg);
+        if (objMsg.Event === 'UserEvent') {
+            self.emit('UserEvent-' + objMsg.UserEvent, objMsg);
         }
     }
 
-    if (self.pendingActions[nicemsg.ActionID]) {
-        self.pendingActions[nicemsg.ActionID].callback(nicemsg);
+    var action = self.pendingActions[objMsg.ActionID];
+    if (action) {
+        action.callback(objMsg);
     }
 };
+
 
 AMI.prototype._setPeriodicCleanup = function _setPeriodicCleanup () {
 
@@ -203,14 +213,15 @@ AMI.prototype._setPeriodicCleanup = function _setPeriodicCleanup () {
 
         // give Asterisk some time to respond, then forget about it
         for (var i in self.pendingActions) {
-            var token = self.pendingActions[i];
-            token.ttl -= 1;
-            if (token.ttl === 0) {
+            var action = self.pendingActions[i];
+            action.ttl -= 1;
+            if (action.ttl === 0) {
                 delete self.pendingActions[i];
             }
         }
     }, 5000);
 };
+
 
 AMI.prototype._clearPeriodicCleanup = function _clearPeriodicCleanup () {
 
@@ -233,20 +244,20 @@ AMI.prototype._send = function (options, callback) {
     }
 
     var actionID = options.ActionID;
-    var query = "";
-    for (var option in options) {
-        if (util.isArray(options[option])) {
-            for (var i in options[option]) {
-                query += option + ": " + options[option][i] + "\r\n";
+    var query = '';
+    for (var key in options) {
+        if (util.isArray(options[key])) {
+            for (var i in options[key]) {
+                query += key + ': ' + options[key][i] + '\r\n';
             }
         } else {
-            query += option + ": " + options[option] + "\r\n";
+            query += key + ': ' + options[key] + '\r\n';
         }
     }
 
     self.socket.write(query + '\r\n');
 
-    if (typeof callback === "function") {
+    if (typeof callback === 'function') {
         self.pendingActions[options.ActionID] = {
             callback: callback,
             ttl: 2        // 10 seconds
@@ -255,6 +266,7 @@ AMI.prototype._send = function (options, callback) {
 
     return actionID;
 };
+
 
 AMI.prototype.send = function (options, callback) {
 
@@ -266,6 +278,7 @@ AMI.prototype.send = function (options, callback) {
 
     self._send.apply(self, arguments);
 };
+
 
 AMI.prototype.disconnect = function (callback) {
 
@@ -288,6 +301,7 @@ AMI.prototype.disconnect = function (callback) {
         }
     });
 };
+
 
 module.exports = AMI;
 // vim: ts=4 sw=4 et si
