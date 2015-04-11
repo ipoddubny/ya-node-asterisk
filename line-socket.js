@@ -1,38 +1,44 @@
-"use strict";
-var net = require('net'),
-    util = require('util');
+'use strict';
 
-function setup_line_processor(self) {
-    var buffer = "";
+var net = require('net');
+var util = require('util');
 
-    function process_data(chunk) {
+
+function LineSocket(options) {
+    net.Socket.call(this, options);
+    this._setupLineProcessing();
+}
+
+util.inherits(LineSocket, net.Socket);
+
+
+LineSocket.prototype._setupLineProcessing = function _setupLineProcessing () {
+
+    var self = this;
+    var buffer = '';
+
+    self.on('data', function (chunk) {
+
         var r, cur;
+
         buffer += chunk;
         r = buffer.split('\r\n');
         while (r.length > 1) {
             cur = r.shift();
             self.emit('line', cur);
         }
-        buffer = r.shift();
-    }
 
-    function process_end() {
+        buffer = r.shift();
+    });
+
+    self.on('end', function () {
+
         if (buffer.length) {
             self.emit('line', buffer);
         }
-    }
+    });
+};
 
-    self.on('data', function (data) { process_data(data); });
-    self.on('end', function () { process_end(); });
-}
 
-function Socket(options) {
-    if (!(this instanceof Socket)) { return new Socket(options); }
-    net.Socket.call(this, options);
-    setup_line_processor(this);
-}
-
-util.inherits(Socket, net.Socket);
-
-exports.Socket = Socket;
+exports.Socket = LineSocket;
 // vim: ts=4 sw=4 et si
