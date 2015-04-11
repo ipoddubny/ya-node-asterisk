@@ -2,16 +2,12 @@
 
 Yana is yet another node.js library for Asterisk Manager Interface.
 
-Tested on Asterisk versions from 1.6.0 up to 12.
-
-The library is still in early stage so the API may be a subject to change.
-
 ## Installation
-Install with npm: `npm install yana`
+    $ npm install yana
 
 ## API
 
-### Creating a new connection
+### Connecting
 
 ```js
 var AMI = require('yana');
@@ -20,7 +16,7 @@ var ami = new AMI({
     port: 5038,
     host: 'example.com',
     login: 'login',
-    password: secret,
+    password: 'secret',
     events: true,
     reconnect: true
 });
@@ -33,33 +29,62 @@ Parameters:
  * ``login``: AMI user login
  * ``password``: AMI user password
  * ``events`` (optional, default: true): set to false to not receive AMI events
- * ``reconnect`` (optional, default: false) automatically reconnect on connection errors
+ * ``reconnect`` (optional, default: false): automatically reconnect on connection errors
+
+### Actions
+
+``
+ami.send(action, [callback])
+``
+
+Parameters:
+
+ * ``action``: an object specifying AMI action to send to Asterisk. Keys are case insensitive.
+
+To specify multiple keys with the same name, use an array as the value, for example
+```
+{
+  Action: 'Originate',
+  ...,
+  SetVar: ['var1=1', 'var2=2']
+}
+```
+will be transformed into AMI action
+```
+Action: Originate
+...
+SetVar: var1=1
+SetVar: var2=2
+```
+
+ * ``callback`` (optional): a handler for the response and the following related events, if there are any.
+
+Callback takes one argument that is message received from Asterisk. Callback is called once for each received message. The only argument is an object representing the message body.
 
 ### Disconnecting
 
-```
+``
 ami.disconnect([callback]);
-```
+``
 
 Parameters:
 
  * ``callback`` (optional)
 
-
 ### Events
 
 AMI is an EventEmitter with the following events:
- * 'connect' emitted when the client has successfully logged in
- * 'error' emitted on unrecoverable errors (connection errors with reconnect turned off, unknown protocol, incorrect login)
- * 'disconnect' is only emitted in reconnection mode when the client loses connection
- * 'reconnect' is emitted on successful reconnection
- * 'event' fires on every event sent by Asterisk
- * all events received from Asterisk are passed trasparently, you can subsribe to events by their names, eg. 'FullyBooted' or 'PeerStatus'
- * UserEvents also trigger events like 'UserEvent-EventName', where EventName is specivied in UserEvent header of AMI message
+ * ``'connect'`` emitted when the client has successfully logged in
+ * ``'error'`` emitted on unrecoverable errors (connection errors with reconnect turned off, unknown protocol, incorrect login)
+ * ``'disconnect'`` is only emitted in reconnection mode when the client loses connection
+ * ``'reconnect'`` is emitted on successful reconnection
+ * ``'event'`` fires on every event sent by Asterisk
+ * all events received from Asterisk are passed trasparently, you can subsribe to events by their names, eg. ``'FullyBooted'`` or ``'PeerStatus'``
+ * UserEvents also trigger events like ``'UserEvent-EventName'``, where EventName is specivied in UserEvent header of AMI message
 
 For thorough documentation on available AMI commands see [Asterisk Wiki](https://wiki.asterisk.org/wiki/display/AST/AMI+Actions).
 
-## Example:
+## Example usage
 ```js
 var util = require('util');
 var AMI = require('yana');
