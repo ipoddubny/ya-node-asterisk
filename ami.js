@@ -278,7 +278,49 @@ AMI.prototype.send = function (options, callback) {
         return false;
     }
 
-    self._send.apply(self, arguments);
+    return self._send.apply(self, arguments);
+};
+
+
+AMI.prototype.action = function action (options, callback) {
+
+    var self = this;
+    var result;
+
+    var actionId = this.send(options, function (res) {
+
+        if (res.Response) {
+            if (res.Response !== 'Success') {
+                delete self.pendingActions[actionId];
+                return callback(new Error(res.Message || 'got Error response'));
+            } else {
+                result = res;
+                if (
+                    res.EventList === 'start' ||
+                    res.Message.match(/will follow$/)
+                ) {
+                    result.events = [];
+                } else {
+                    delete self.pendingActions[actionId];
+                    return callback(null, result);
+                }
+            }
+        } else if (res.Event) {
+            if (res.Event.match(/Complete$/)) {
+                delete self.pendingActions[actionId];
+                return callback(null, result);
+            } else {
+                result.events.push(res);
+            }
+        }
+    });
+
+    if (actionId) {
+        var action = this.pendingActions[actionId];
+        action.ttl = 60;
+    } else {
+        return callback(new Error('no authorized AMI connection to send commands'));
+    }
 };
 
 
