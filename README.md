@@ -46,15 +46,15 @@ To specify multiple keys with the same name, use an array as the value, for exam
 {
   Action: 'Originate',
   ...,
-  SetVar: ['var1=1', 'var2=2']
+  Variable: ['var1=1', 'var2=2']
 }
 ```
 will be transformed into AMI action
 ```
 Action: Originate
 ...
-SetVar: var1=1
-SetVar: var2=2
+Variable: var1=1
+Variable: var2=2
 ```
 
  * ``callback`` (optional): a handler for the response and the following related events, if there are any.
