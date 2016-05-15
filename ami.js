@@ -20,14 +20,17 @@ function AMI (options) {
 
   this.state = ST_DISCONNECTED;
   this.reconnectCounter = 0;
-
-  this._connect();
 }
 
 util.inherits(AMI, EventEmitter);
 
-AMI.prototype._connect = function _connect () {
+AMI.prototype.connect = function connect (cb) {
   var self = this;
+
+  if (self.socket) {
+    self.socket.unref();
+    self.socket.removeAllListeners();
+  }
 
   self.socket = new LineSocket();
 
@@ -42,6 +45,10 @@ AMI.prototype._connect = function _connect () {
   });
 
   self.socket.connect(self.options.port || 5038, self.options.host || 'localhost');
+
+  if (cb) {
+    self.once('connect', cb);
+  }
 };
 
 AMI.prototype._socketError = function _socketError (msg) {
@@ -72,7 +79,7 @@ AMI.prototype._socketError = function _socketError (msg) {
 
     self._reconnectTimeout = setTimeout(function () {
       delete self._reconnectTimeout;
-      self._connect();
+      self.connect();
     }, self._backoffTimeout);
   } else {
     self.emit('error', msg);

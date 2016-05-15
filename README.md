@@ -22,9 +22,13 @@ var ami = new AMI({
   events: true,
   reconnect: true
 });
+
+ami.connect(function () {
+  console.log('Connected to AMI');
+});
 ```
 
-Parameters:
+Constructor parameters:
 
  * ``host`` (optional, default: 'localhost'): host the client connects to
  * ``port`` (optional, default: 5038): port the client connects to
@@ -32,6 +36,14 @@ Parameters:
  * ``password``: AMI user password
  * ``events`` (optional, default: true): set to false to not receive AMI events
  * ``reconnect`` (optional, default: false): automatically reconnect on connection errors
+
+``
+ami.connect([callback])
+``
+
+Starts connection. When the connection is established, the 'connect' event will be emitted.
+The ``callback`` parameter will be added as an once-listener for the 'connect' event.
+
 
 ### Actions
 
@@ -96,7 +108,7 @@ var ami = new AMI({
   password: 'secret'
 });
 
-ami.on('connect', function () {
+ami.connect(function () {
   console.log('Connected');
 });
 

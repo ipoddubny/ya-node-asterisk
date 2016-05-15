@@ -14,7 +14,7 @@ function print_res (res) {
   util.log('response to action: ' + util.inspect(res));
 }
 
-ami.on('connect', function () {
+ami.connect(function () {
   ami.send({Action: 'Command', Command: 'core show uptime'}, print_res);
   util.log('connected to AMI version ' + ami.version);
 });
