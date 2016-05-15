@@ -3,42 +3,35 @@
 var net = require('net');
 var util = require('util');
 
-
-function LineSocket(options) {
-    net.Socket.call(this, options);
-    this._setupLineProcessing();
+function LineSocket (options) {
+  net.Socket.call(this, options);
+  this._setupLineProcessing();
 }
 
 util.inherits(LineSocket, net.Socket);
 
-
 LineSocket.prototype._setupLineProcessing = function _setupLineProcessing () {
+  var self = this;
+  var buffer = '';
 
-    var self = this;
-    var buffer = '';
+  self.on('data', function (chunk) {
+    var r, cur;
 
-    self.on('data', function (chunk) {
+    buffer += chunk;
+    r = buffer.split('\r\n');
+    while (r.length > 1) {
+      cur = r.shift();
+      self.emit('line', cur);
+    }
 
-        var r, cur;
+    buffer = r.shift();
+  });
 
-        buffer += chunk;
-        r = buffer.split('\r\n');
-        while (r.length > 1) {
-            cur = r.shift();
-            self.emit('line', cur);
-        }
-
-        buffer = r.shift();
-    });
-
-    self.on('end', function () {
-
-        if (buffer.length) {
-            self.emit('line', buffer);
-        }
-    });
+  self.on('end', function () {
+    if (buffer.length) {
+      self.emit('line', buffer);
+    }
+  });
 };
 
-
-exports.Socket = LineSocket;
-// vim: ts=4 sw=4 et si
+module.exports = LineSocket;

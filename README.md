@@ -1,3 +1,5 @@
+[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard)
+
 # Yana
 
 Yana is yet another node.js library for Asterisk Manager Interface.
@@ -13,12 +15,12 @@ Yana is yet another node.js library for Asterisk Manager Interface.
 var AMI = require('yana');
 
 var ami = new AMI({
-    port: 5038,
-    host: 'example.com',
-    login: 'login',
-    password: 'secret',
-    events: true,
-    reconnect: true
+  port: 5038,
+  host: 'example.com',
+  login: 'login',
+  password: 'secret',
+  events: true,
+  reconnect: true
 });
 ```
 
@@ -90,29 +92,29 @@ var util = require('util');
 var AMI = require('yana');
 
 var ami = new AMI({
-    login: 'login',
-    password: 'secret'
+  login: 'login',
+  password: 'secret'
 });
 
 ami.on('connect', function () {
-    console.log('Connected');
+  console.log('Connected');
 });
 
-ami.on('error', function(err) {
-    console.log('An error occured: ' + err);
+ami.on('error', function (err) {
+  console.log('An error occured: ' + err);
 });
 
 ami.on('FullyBooted', function (event) {
-    console.log('Ready');
-    ami.send({Action: 'ListCommands'}, function (res) {
-        console.log(util.inspect(res));
+  console.log('Ready');
+  ami.send({Action: 'ListCommands'}, function (res) {
+    console.log(util.inspect(res));
+  });
+  setTimeout(function () {
+    console.log('Disconnecting...');
+    ami.disconnect(function () {
+      process.exit(0);
     });
-    setTimeout(function () {
-        console.log('Disconnecting...');
-        ami.disconnect(function () {
-            process.exit(0);
-        });
-    }, 5000);
+  }, 5000);
 });
 ```
 
