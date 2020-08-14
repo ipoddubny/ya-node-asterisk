@@ -10,17 +10,17 @@ var ami = new AMI({
   events: true
 });
 
-function print_res (res) {
-  util.log('response to action: ' + util.inspect(res));
+function printRes (res) {
+  console.log('response to action: ' + util.inspect(res));
 }
 
 ami.connect(function () {
-  ami.send({Action: 'Command', Command: 'core show uptime'}, print_res);
-  util.log('connected to AMI version ' + ami.version);
+  ami.send({ Action: 'Command', Command: 'core show uptime' }, printRes);
+  console.log('connected to AMI version ' + ami.version);
 });
 
 ami.on('error', function (e) {
-  util.log('Fatal error: ' + e);
+  console.log('Fatal error: ' + e);
   process.exit(255);
 });
 
@@ -28,15 +28,15 @@ ami.on('FullyBooted', function () {
   ami.send({
     Action: 'Command',
     Command: 'database show'
-  }, print_res);
-  ami.send({Action: 'SIPpeers'}, print_res);
+  }, printRes);
+  ami.send({ Action: 'SIPpeers' }, printRes);
   ami.on('event', function (ev) {
-    util.log('got event ' + ev.Event);
+    console.log('got event ' + ev.Event);
   });
 });
 
 process.on('SIGINT', function () {
-  util.log('SIGINT received, stopping');
+  console.log('SIGINT received, stopping');
   ami.disconnect();
   process.exit(0);
 });
@@ -45,16 +45,16 @@ setTimeout(function () {
   ami.send({
     Action: 'Command',
     Command: 'sip show registry'
-  }, print_res);
-  ami.send({Action: 'ShowDialPlan'}, print_res);
+  }, printRes);
+  ami.send({ Action: 'ShowDialPlan' }, printRes);
   setTimeout(function () {
-    ami.send({Action: 'SIPpeers'}, print_res);
+    ami.send({ Action: 'SIPpeers' }, printRes);
   }, 5000);
   setInterval(function () {
-    ami.send({Action: 'Ping'}, print_res);
+    ami.send({ Action: 'Ping' }, printRes);
   }, 3000);
 }, 3000);
 
 ami.on('PeerStatus', function (msg) {
-  util.log('peer status: ' + util.inspect(msg));
+  console.log('peer status: ' + util.inspect(msg));
 });
