@@ -2,10 +2,11 @@
 const EventEmitter = require('events').EventEmitter;
 const LineSocket = require('./line-socket');
 
-const ST_DISCONNECTED = 0;
+const ST_NEW = 0;
 const ST_CONNECTED = 1;
 const ST_AUTHORIZED = 2;
 const ST_DISCONNECTING = 3;
+const ST_DISCONNECTED = 4;
 
 const RECONNECT_MAX_DELAY = 1000;
 const RECONNECT_FACTOR = 1.5;
@@ -15,7 +16,7 @@ class AMI extends EventEmitter {
     super();
     this.options = options;
     this.pendingActions = {};
-    this.state = ST_DISCONNECTED;
+    this.state = ST_NEW;
     this.reconnectCounter = 0;
   }
 
@@ -47,13 +48,22 @@ class AMI extends EventEmitter {
 
     this.socket.unref();
 
-    if (prevState === ST_DISCONNECTING) {
-      return;
-    }
-
-    if (prevState !== ST_DISCONNECTED) {
-      this._backoffTimeout = 20;
-      this.emit('disconnect');
+    switch (prevState) {
+      case ST_NEW:
+        this.emit('error', msg);
+        // do not attempt to reconnect, return now
+        return;
+      case ST_DISCONNECTING:
+        // do not attempt to reconnect, return now
+        return;
+      case ST_CONNECTED:
+      case ST_AUTHORIZED:
+        this._backoffTimeout = 20;
+        this.emit('disconnect');
+        break;
+      case ST_DISCONNECTED:
+        // do nothing, already disconnected
+        break;
     }
 
     if (this.options.reconnect) {
