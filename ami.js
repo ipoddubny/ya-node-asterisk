@@ -39,9 +39,18 @@ class AMI extends EventEmitter {
     this.socket.on('end', () => this._socketError('Connection closed', null));
     this.socket.connect(this.options.port || 5038, this.options.host || 'localhost');
 
+    const promise = new Promise((resolve, reject) => {
+      const onConnect = () => { this.removeListener('error', onError); resolve(); };
+      const onError = err => { this.removeListener('connect', onConnect); reject(err); };
+      this.once('connect', onConnect);
+      this.once('error', onError);
+    });
+
     if (cb) {
-      this.once('connect', cb);
+      promise.then(cb);
     }
+
+    return promise;
   }
 
   _socketError (msg, err) {
@@ -227,7 +236,6 @@ class AMI extends EventEmitter {
       options.actionid = Math.floor(Math.random() * 100000000);
     }
 
-    const actionID = options.actionid;
     let query = '';
     for (const [key, val] of Object.entries(options)) {
       if (Array.isArray(val)) {
@@ -241,20 +249,39 @@ class AMI extends EventEmitter {
 
     this.socket.write(query + '\r\n');
 
-    if (typeof callback === 'function') {
-      this.pendingActions[options.actionid] = { callback };
+    const promise = new Promise((resolve, reject) => {
+      this.pendingActions[options.actionid] = {
+        callback: (err, res) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          resolve(res);
+        }
+      };
+    });
+
+    if (typeof (callback) === 'function') {
+      promise
+        .catch(err => callback(err))
+        .then(res => callback(null, res));
     }
 
-    return actionID;
+    return promise;
   }
 
   send (options, callback) {
     if (this.state !== ST_AUTHORIZED) {
-      // don't do it immediately, never call callback on the same tick
-      process.nextTick(() => callback(new Error('not connected')));
+      if (typeof (callback) === 'function') {
+        // don't do it immediately, never call callback on the same tick
+        process.nextTick(() => callback(new Error('not connected')));
+      }
+
+      return;
     }
 
-    this._send.apply(this, arguments);
+    return this._send.apply(this, arguments);
   }
 
   disconnect (callback) {
@@ -263,14 +290,24 @@ class AMI extends EventEmitter {
       return false;
     }
 
-    this.send({ Action: 'Logoff' }, () => {
-      this.state = ST_DISCONNECTING;
-      this.socket.end();
+    const promise = this.send({ action: 'Logoff' });
 
-      if (typeof callback === 'function') {
-        callback();
-      }
-    });
+    promise
+      .catch(err => {
+        if (typeof callback === 'function') {
+          callback(err);
+        }
+      })
+      .then(() => {
+        this.state = ST_DISCONNECTING;
+        this.socket.end();
+
+        if (typeof callback === 'function') {
+          callback(null);
+        }
+      });
+
+    return promise;
   }
 }
 
