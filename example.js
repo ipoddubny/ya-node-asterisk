@@ -10,7 +10,12 @@ var ami = new AMI({
   events: true
 });
 
-function printRes (res) {
+function printRes (err, res) {
+  if (err) {
+    console.log('action failed', err);
+    return;
+  }
+
   console.log('response to action: ' + util.inspect(res));
 }
 
@@ -20,7 +25,7 @@ ami.connect(function () {
 });
 
 ami.on('error', function (e) {
-  console.log('Fatal error: ' + e);
+  console.log('Fatal error: ', e);
   process.exit(255);
 });
 

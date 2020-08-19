@@ -11,6 +11,11 @@ const ST_DISCONNECTED = 4;
 const RECONNECT_MAX_DELAY = 1000;
 const RECONNECT_FACTOR = 1.5;
 
+const REGEX_END_COMMAND = /--END COMMAND--$/;
+const REGEX_KV_LINE = /(.+?):\s*(.*)/;
+const REGEX_WILL_FOLLOW = /will follow$/;
+const REGEX_COMPLETE = /Complete$/;
+
 class AMI extends EventEmitter {
   constructor (options) {
     super();
@@ -30,8 +35,8 @@ class AMI extends EventEmitter {
 
     this.socket.once('line', line => this._onFirstLine(line));
 
-    this.socket.on('error', err => this._socketError(`Socket error: ${err.code}`));
-    this.socket.on('end', () => this._socketError('Connection closed'));
+    this.socket.on('error', err => this._socketError(`Socket error: ${err.code}`, err));
+    this.socket.on('end', () => this._socketError('Connection closed', null));
     this.socket.connect(this.options.port || 5038, this.options.host || 'localhost');
 
     if (cb) {
@@ -39,18 +44,21 @@ class AMI extends EventEmitter {
     }
   }
 
-  _socketError (msg) {
+  _socketError (msg, err) {
     const prevState = this.state;
+    const error = err || new Error(msg);
 
     this.state = ST_DISCONNECTED;
-
-    this._clearPeriodicCleanup();
+    for (const action of Object.values(this.pendingActions)) {
+      action.callback(error);
+    }
+    this.pendingActions = {};
 
     this.socket.unref();
 
     switch (prevState) {
       case ST_NEW:
-        this.emit('error', msg);
+        this.emit('error', error);
         // do not attempt to reconnect, return now
         return;
       case ST_DISCONNECTING:
@@ -77,7 +85,7 @@ class AMI extends EventEmitter {
         this.connect();
       }, this._backoffTimeout);
     } else {
-      this.emit('error', msg);
+      this.emit('error', error);
     }
   }
 
@@ -85,11 +93,23 @@ class AMI extends EventEmitter {
     const version = line.match(/Asterisk Call Manager\/(\S+)/);
     if (!version) {
       this.socket.destroy();
-      this.emit('error', 'Connection Error: server replied with unknown signature');
+      this.emit('error', new Error('Connection Error: server replied with unknown signature'));
       return;
     }
 
     this.version = version[1];
+    this._parsedVersion = this.version.split('.').map(x => +x);
+    const pv = this._parsedVersion;
+    /* known versions:
+    - 1.[01]    <= 1.8
+    - 1.2       10
+    - 1.3       11
+    - [23].x.x  12 - 14 mixed
+    - 4.x.x     15
+    - 5.x.x     16
+    */
+    this._eventListHack = (pv[0] === 2 && pv[1] < 7) || pv[0] < 2; // Asterisk 13.2.0 / 14
+    this._cmdHack = pv[0] < 4; // Asterisk 14+, but this checks for 15+, since we can't distinguish early 14 (2.8.x) from 13 (2.x.x, including 2.8.x)
 
     this.state = ST_CONNECTED;
 
@@ -102,9 +122,13 @@ class AMI extends EventEmitter {
       Username: this.options.login,
       Secret: this.options.password,
       Events: (eventsOff ? 'off' : 'on')
-    }, res => {
-      if (res.Response === 'Success') {
-        this._setPeriodicCleanup();
+    }, (err, res) => {
+      if (err) {
+        this.emit('error', err);
+        return;
+      }
+
+      if (res.response === 'Success') {
         this.state = ST_AUTHORIZED;
         if (this.reconnectCounter === 0) {
           this.emit('connect');
@@ -115,7 +139,7 @@ class AMI extends EventEmitter {
         this.reconnectCounter++;
       } else {
         this.state = ST_DISCONNECTED;
-        this.emit('error', res.Message);
+        this.emit('error', new Error(res.Message));
       }
     });
   }
@@ -138,73 +162,65 @@ class AMI extends EventEmitter {
   _processMessage (rawMsg) {
     const objMsg = {};
     for (const line of rawMsg) {
-      if (line.match(/--END COMMAND--$/)) {
-        // The Command action returns a non-standard response
+      if (this._cmdHack && line.match(REGEX_END_COMMAND)) {
+        // The Command action returns a non-standard response in Asterisk < 14
         // Split into array and drop the last line containing "END COMMAND"
-        objMsg.CMD = line.split('\n').slice(0, -1);
+        objMsg.output = line.split('\n').slice(0, -1);
         continue;
       }
 
-      const res = line.match(/(.+?):\s*(.*)/);
+      const res = line.match(REGEX_KV_LINE);
       if (!res) {
         // ignore invalid lines (e.g. for actions like Queues)
         continue;
       }
 
       const [, property, value] = res;
+      const lproperty = property.toLowerCase();
 
-      if (!(property in objMsg)) {
-        objMsg[property] = value;
-      } else if (Array.isArray(objMsg[property])) {
-        objMsg[property].push(value);
+      if (!(lproperty in objMsg)) {
+        objMsg[lproperty] = value;
+      } else if (Array.isArray(objMsg[lproperty])) {
+        objMsg[lproperty].push(value);
       } else {
         // arrayify
-        objMsg[property] = [objMsg[property], value];
+        objMsg[lproperty] = [objMsg[lproperty], value];
       }
     }
 
-    if (objMsg.Event) {
+    if (objMsg.event) {
       this.emit('event', objMsg);
-      this.emit(objMsg.Event, objMsg);
-      if (objMsg.Event === 'UserEvent') {
-        this.emit('UserEvent-' + objMsg.UserEvent, objMsg);
+      this.emit(objMsg.event, objMsg);
+      if (objMsg.event === 'userevent') {
+        this.emit('userevent-' + objMsg.userevent, objMsg);
       }
     }
 
-    const action = this.pendingActions[objMsg.ActionID];
+    const action = this.pendingActions[objMsg.actionid];
     if (action) {
-      action.callback(objMsg);
-    }
-  }
-
-  _setPeriodicCleanup () {
-    this._clearPeriodicCleanup();
-
-    this._cleanupInterval = setInterval(() => {
-      // give Asterisk some time to respond, then forget about it
-      for (const [actionID, action] of Object.entries(this.pendingActions)) {
-        action.ttl -= 1;
-        if (action.ttl === 0) {
-          delete this.pendingActions[actionID];
+      if (objMsg.response === 'Success' && (objMsg.eventlist === 'start' || (this._eventListHack && REGEX_WILL_FOLLOW.test(objMsg.message)))) {
+        objMsg.eventlist = [];
+        action.result = objMsg;
+      } else if (action.result) { // collecting an event list
+        if (objMsg.eventlist || (this._eventListHack && REGEX_COMPLETE.test(objMsg.event))) { // this is the last message in the event list
+          action.callback(null, action.result);
+          delete this.pendingActions[objMsg.actionid];
+        } else {
+          action.result.eventlist.push(objMsg);
         }
+      } else {
+        action.callback(null, objMsg);
+        delete this.pendingActions[objMsg.actionid];
       }
-    }, 5000);
-  }
-
-  _clearPeriodicCleanup () {
-    if (this._cleanupInterval) {
-      clearInterval(this._cleanupInterval);
     }
-
-    delete this._inverval;
   }
 
   _send (options, callback) {
-    if (!options.ActionID) {
-      options.ActionID = Math.floor(Math.random() * 100000000);
+    if (!options.actionid) {
+      options.actionid = Math.floor(Math.random() * 100000000);
     }
 
-    const actionID = options.ActionID;
+    const actionID = options.actionid;
     let query = '';
     for (const [key, val] of Object.entries(options)) {
       if (Array.isArray(val)) {
@@ -219,10 +235,7 @@ class AMI extends EventEmitter {
     this.socket.write(query + '\r\n');
 
     if (typeof callback === 'function') {
-      this.pendingActions[options.ActionID] = {
-        callback: callback,
-        ttl: 2 // 10 seconds
-      };
+      this.pendingActions[options.actionid] = { callback };
     }
 
     return actionID;
@@ -243,8 +256,6 @@ class AMI extends EventEmitter {
     }
 
     this.send({ Action: 'Logoff' }, () => {
-      this._clearPeriodicCleanup();
-
       this.state = ST_DISCONNECTING;
       this.socket.end();
 

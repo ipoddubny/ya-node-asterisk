@@ -41,9 +41,8 @@ Constructor parameters:
 ami.connect([callback])
 ``
 
-Starts connection. When the connection is established, the 'connect' event will be emitted.
+Initiates a connection. When the connection is established, the 'connect' event will be emitted.
 The ``callback`` parameter will be added as an once-listener for the 'connect' event.
-
 
 ### Actions
 
@@ -71,9 +70,14 @@ Variable: var1=1
 Variable: var2=2
 ```
 
- * ``callback`` (optional): a handler for the response and the following related events, if there are any.
+ * ``callback`` (optional): a function to handle response
 
-Callback takes one argument that is message received from Asterisk. Callback is called once for each received message. The only argument is an object representing the message body.
+callback takes 2 arguments (err, res):
+ - ``err`` indicates only connection or protocol errors. If an AMI action fails, but returns a valid response, it is not considered an error.
+ - ``res`` is an object representing the message received from Asterisk (keys and values depend on Asterisk).
+   Keys are always converted to lower case.
+   Actions returning results in multiple AMI events are collected as an ``eventlist`` key in ``res``.
+   AMI results containing multiple keys of the same name are converted to objects containing one key with values collected in an array.
 
 ### Disconnecting
 
@@ -118,7 +122,7 @@ ami.on('error', function (err) {
 
 ami.on('FullyBooted', function (event) {
   console.log('Ready');
-  ami.send({Action: 'ListCommands'}, function (res) {
+  ami.send({Action: 'ListCommands'}, function (err, res) {
     console.log(util.inspect(res));
   });
   setTimeout(function () {
