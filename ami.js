@@ -115,13 +115,20 @@ class AMI extends EventEmitter {
 
     this._setupMessageBuffering();
 
-    var eventsOff = this.options.events === false || this.options.events === 'off';
+    let events = 'on';
+    if ('events' in this.options) {
+      if (typeof (this.options.events) === 'boolean') {
+        events = this.options.events ? 'on' : 'off';
+      } else {
+        events = this.options.events;
+      }
+    }
 
     this._send({
-      Action: 'Login',
-      Username: this.options.login,
-      Secret: this.options.password,
-      Events: (eventsOff ? 'off' : 'on')
+      action: 'Login',
+      username: this.options.login,
+      secret: this.options.password,
+      events
     }, (err, res) => {
       if (err) {
         this.emit('error', err);

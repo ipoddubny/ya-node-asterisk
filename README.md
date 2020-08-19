@@ -19,7 +19,7 @@ var ami = new AMI({
   host: 'example.com',
   login: 'login',
   password: 'secret',
-  events: true,
+  events: 'on',
   reconnect: true
 });
 
@@ -34,7 +34,7 @@ Constructor parameters:
  * ``port`` (optional, default: 5038): port the client connects to
  * ``login``: AMI user login
  * ``password``: AMI user password
- * ``events`` (optional, default: true): set to false to not receive AMI events
+ * ``events`` (optional, default: 'on'): string specifying which AMI event classes to receive, all by default (see [Asterisk Wiki](https://wiki.asterisk.org/wiki/display/AST/Asterisk+16+ManagerAction_Events))
  * ``reconnect`` (optional, default: false): automatically reconnect on connection errors
 
 ``
