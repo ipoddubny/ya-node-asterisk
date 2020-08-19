@@ -250,7 +250,8 @@ class AMI extends EventEmitter {
 
   send (options, callback) {
     if (this.state !== ST_AUTHORIZED) {
-      return false;
+      // don't do it immediately, never call callback on the same tick
+      process.nextTick(() => callback(new Error('not connected')));
     }
 
     this._send.apply(this, arguments);
