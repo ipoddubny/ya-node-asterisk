@@ -278,7 +278,7 @@ class AMI extends EventEmitter {
         process.nextTick(() => callback(new Error('not connected')));
       }
 
-      return;
+      return Promise.reject(new Error('not connected'));
     }
 
     return this._send.apply(this, arguments);
