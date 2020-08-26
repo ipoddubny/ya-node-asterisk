@@ -2,12 +2,6 @@
 const EventEmitter = require('events').EventEmitter;
 const LineSocket = require('./line-socket');
 
-const ST_NEW = 0;
-const ST_CONNECTED = 1;
-const ST_AUTHORIZED = 2;
-const ST_DISCONNECTING = 3;
-const ST_DISCONNECTED = 4;
-
 const RECONNECT_MAX_DELAY = 1000;
 const RECONNECT_FACTOR = 1.5;
 
@@ -21,8 +15,9 @@ class AMI extends EventEmitter {
     super();
     this.options = options;
     this.pendingActions = {};
-    this.state = ST_NEW;
-    this.reconnectCounter = 0;
+    this._onceConnected = false;
+    this._connected = false;
+    this._disconnected = false;
   }
 
   connect (cb) {
@@ -31,12 +26,14 @@ class AMI extends EventEmitter {
       this.socket.removeAllListeners();
     }
 
+    this._disconnected = false;
+
     this.socket = new LineSocket();
 
     this.socket.once('line', line => this._onFirstLine(line));
 
-    this.socket.on('error', err => this._socketError(`Socket error: ${err.code}`, err));
-    this.socket.on('end', () => this._socketError('Connection closed', null));
+    this.socket.on('error', err => this._socketError(err));
+    this.socket.on('end', () => this._socketError(new Error('Connection closed')));
     this.socket.connect(this.options.port || 5038, this.options.host || 'localhost');
 
     const promise = new Promise((resolve, reject) => {
@@ -53,34 +50,31 @@ class AMI extends EventEmitter {
     return promise;
   }
 
-  _socketError (msg, err) {
-    const prevState = this.state;
-    const error = err || new Error(msg);
+  _socketError (err) {
+    this.socket.unref();
 
-    this.state = ST_DISCONNECTED;
     for (const action of Object.values(this.pendingActions)) {
-      action.callback(error);
+      action.callback(err);
     }
     this.pendingActions = {};
 
-    this.socket.unref();
+    const prevConnected = this._connected;
+    this._connected = false;
+    if (this._disconnected) {
+      // it's ok, we're disconnected
+      return;
+    }
 
-    switch (prevState) {
-      case ST_NEW:
-        this.emit('error', error);
-        // do not attempt to reconnect, return now
-        return;
-      case ST_DISCONNECTING:
-        // do not attempt to reconnect, return now
-        return;
-      case ST_CONNECTED:
-      case ST_AUTHORIZED:
-        this._backoffTimeout = 20;
-        this.emit('disconnect');
-        break;
-      case ST_DISCONNECTED:
-        // do nothing, already disconnected
-        break;
+    if (!this._onceConnected) {
+      // never connected before => stop it now
+      this.emit('error', err);
+      return;
+    }
+
+    if (prevConnected === true) {
+      // lost connection just now
+      this._backoffTimeout = 20;
+      this.emit('disconnect');
     }
 
     if (this.options.reconnect) {
@@ -94,15 +88,14 @@ class AMI extends EventEmitter {
         this.connect();
       }, this._backoffTimeout);
     } else {
-      this.emit('error', error);
+      this.emit('error', err);
     }
   }
 
   _onFirstLine (line) {
     const version = line.match(/Asterisk Call Manager\/(\S+)/);
     if (!version) {
-      this.socket.destroy();
-      this.emit('error', new Error('Connection Error: server replied with unknown signature'));
+      this.socket.destroy(new Error('Connection Error: server replied with unknown signature'));
       return;
     }
 
@@ -119,8 +112,6 @@ class AMI extends EventEmitter {
     */
     this._eventListHack = (pv[0] === 2 && pv[1] < 7) || pv[0] < 2; // Asterisk 13.2.0 / 14
     this._cmdHack = pv[0] < 4; // Asterisk 14+, but this checks for 15+, since we can't distinguish early 14 (2.8.x) from 13 (2.x.x, including 2.8.x)
-
-    this.state = ST_CONNECTED;
 
     this._setupMessageBuffering();
 
@@ -145,17 +136,11 @@ class AMI extends EventEmitter {
       }
 
       if (res.response === 'Success') {
-        this.state = ST_AUTHORIZED;
-        if (this.reconnectCounter === 0) {
-          this.emit('connect');
-        } else {
-          this.emit('reconnect');
-        }
-
-        this.reconnectCounter++;
+        this._connected = true;
+        this.emit(this._onceConnected ? 'reconnect' : 'connect');
+        this._onceConnected = true;
       } else {
-        this.state = ST_DISCONNECTED;
-        this.emit('error', new Error(res.Message));
+        this.socket.destroy(new Error(`Login failed: ${res.message}`));
       }
     });
   }
@@ -272,7 +257,7 @@ class AMI extends EventEmitter {
   }
 
   send (options, callback) {
-    if (this.state !== ST_AUTHORIZED) {
+    if (!this._connected) {
       if (typeof (callback) === 'function') {
         // don't do it immediately, never call callback on the same tick
         process.nextTick(() => callback(new Error('not connected')));
@@ -299,7 +284,7 @@ class AMI extends EventEmitter {
         }
       })
       .then(() => {
-        this.state = ST_DISCONNECTING;
+        this._disconnected = true;
         this.socket.end();
 
         if (typeof callback === 'function') {
