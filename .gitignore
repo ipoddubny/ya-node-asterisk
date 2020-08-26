@@ -1,0 +1,5 @@
+node_modules
+coverage
+.*sw?
+.vscode
+package-lock.json

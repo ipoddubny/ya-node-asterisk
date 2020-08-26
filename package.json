@@ -18,5 +18,11 @@
   },
   "author": "Ivan Poddubny <ivan.poddubny@gmail.com>",
   "main": "ami.js",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^26.4.2"
+  },
+  "scripts": {
+    "test": "jest"
+  }
 }
