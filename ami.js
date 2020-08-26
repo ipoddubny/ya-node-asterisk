@@ -192,8 +192,8 @@ class AMI extends EventEmitter {
     if (objMsg.event) {
       this.emit('event', objMsg);
       this.emit(objMsg.event, objMsg);
-      if (objMsg.event === 'userevent') {
-        this.emit('userevent-' + objMsg.userevent, objMsg);
+      if (objMsg.event === 'UserEvent') {
+        this.emit('UserEvent-' + objMsg.userevent, objMsg);
       }
     }
 
@@ -275,14 +275,7 @@ class AMI extends EventEmitter {
       return false;
     }
 
-    const promise = this.send({ action: 'Logoff' });
-
-    promise
-      .catch(err => {
-        if (typeof callback === 'function') {
-          callback(err);
-        }
-      })
+    return this.send({ action: 'Logoff' })
       .then(() => {
         this._disconnected = true;
         this.socket.end();
@@ -290,9 +283,14 @@ class AMI extends EventEmitter {
         if (typeof callback === 'function') {
           callback(null);
         }
+      })
+      .catch(err => {
+        if (typeof callback === 'function') {
+          callback(err);
+        } else {
+          throw err;
+        }
       });
-
-    return promise;
   }
 }
 
