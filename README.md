@@ -1,4 +1,5 @@
-[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard)
+[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg)](https://github.com/Flet/semistandard)
+[![Node.js CI](https://github.com/ipoddubny/ya-node-asterisk/workflows/Node.js%20CI/badge.svg)](https://github.com/ipoddubny/ya-node-asterisk/actions)
 
 # Yana
 
