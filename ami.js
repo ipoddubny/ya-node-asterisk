@@ -20,7 +20,7 @@ class AMI extends EventEmitter {
     this._disconnected = false;
   }
 
-  _connect() {
+  _connect () {
     if (this.socket) {
       this.socket.unref();
       this.socket.removeAllListeners();
