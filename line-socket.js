@@ -5,11 +5,11 @@ var net = require('net');
 class LineSocket extends net.Socket {
   constructor (options) {
     super(options);
-    this._setupLineProcessing();
-  }
 
-  _setupLineProcessing () {
     let buffer = '';
+
+    this.setNoDelay();
+    this.setKeepAlive(true, 30000);
 
     this.on('data', chunk => {
       buffer += chunk;
