@@ -41,9 +41,8 @@ class AMI extends EventEmitter {
     this._connect();
 
     const promise = new Promise((resolve, reject) => {
-      const onConnect = () => { console.log('once connect fired'); this.removeListener('error', onError); resolve(); };
-      const onError = err => { console.log('once error fired'); this.removeListener('connect', onConnect); reject(err); };
-      console.log('adding  listeners for connect and error');
+      const onConnect = () => { this.removeListener('error', onError); resolve(); };
+      const onError = err => { this.removeListener('connect', onConnect); reject(err); };
       this.once('connect', onConnect);
       this.once('error', onError);
     });
