@@ -17,8 +17,8 @@ function makeAMI(overrides = {}) {
   return new AMI(options);
 }
 
-async function makeLoggedInAMI() {
-  const ami = makeAMI();
+async function makeLoggedInAMI(overrides) {
+  const ami = makeAMI(overrides);
   MLS.expectAndRespondToAction(
     /action: Login\r\nusername: 123\r\nsecret: 321\r\nevents: off/,
     [
@@ -31,6 +31,7 @@ async function makeLoggedInAMI() {
 
 describe('AMI', () => {
   beforeEach(() => {
+    MLS.prototype.connect.mockClear();
     MLS.prototype.write.mockClear();
     MLS.prototype.end.mockClear();
   });
@@ -72,6 +73,38 @@ describe('AMI', () => {
     );
 
     ami.connect(() => {
+      done();
+    });
+  });
+
+  test('reconnect', async (done) => {
+    const ami = await makeLoggedInAMI({reconnect: true});
+
+    // this triggers a warning early on, but it's impossible to set a process.on('warning') in jest
+    // so it's only logged to stdout, but not caught
+    ami.setMaxListeners(1);
+
+    const FAILED_CONNECTIONS = 3;
+
+    for (let i = 0; i < FAILED_CONNECTIONS; i++) {
+      MLS.prototype.connect.mockImplementationOnce(function () {
+        this.emit('error');
+      });
+    }
+
+    ami.socket.emit('error', new Error('test error'));
+
+    MLS.expectAndRespondToAction(
+      /action: Login\r\nusername: 123\r\nsecret: 321\r\nevents: off/,
+      [
+        'Response: Success'
+      ]
+    );
+
+    ami.once('reconnect', () => {
+      expect(ami.rawListeners('connect')).toHaveLength(0);
+      expect(ami.rawListeners('error')).toHaveLength(0);
+      expect(MLS.prototype.connect).toHaveBeenCalledTimes(1 + FAILED_CONNECTIONS + 1);
       done();
     });
   });

@@ -1,10 +1,6 @@
 const EventEmitter = require('events').EventEmitter;
 
 class MockLineSocket extends EventEmitter {
-  connect() {
-    this.emit('connect');
-    this.emit('line', 'Asterisk Call Manager/1.2.3');
-  }
   unref() {}
   destroy(err) {
     if (err) {
@@ -18,6 +14,11 @@ class MockLineSocket extends EventEmitter {
     }
   }
 }
+
+MockLineSocket.prototype.connect = jest.fn(function () {
+  this.emit('connect');
+  this.emit('line', 'Asterisk Call Manager/1.2.3');
+});
 
 const writer = MockLineSocket.prototype.write = jest.fn();
 MockLineSocket.prototype.end = jest.fn();

@@ -20,7 +20,7 @@ class AMI extends EventEmitter {
     this._disconnected = false;
   }
 
-  connect (cb) {
+  _connect() {
     if (this.socket) {
       this.socket.unref();
       this.socket.removeAllListeners();
@@ -35,10 +35,15 @@ class AMI extends EventEmitter {
     this.socket.on('error', err => this._socketError(err));
     this.socket.on('end', () => this._socketError(new Error('Connection closed')));
     this.socket.connect(this.options.port || 5038, this.options.host || 'localhost');
+  }
+
+  connect (cb) {
+    this._connect();
 
     const promise = new Promise((resolve, reject) => {
-      const onConnect = () => { this.removeListener('error', onError); resolve(); };
-      const onError = err => { this.removeListener('connect', onConnect); reject(err); };
+      const onConnect = () => { console.log('once connect fired'); this.removeListener('error', onError); resolve(); };
+      const onError = err => { console.log('once error fired'); this.removeListener('connect', onConnect); reject(err); };
+      console.log('adding  listeners for connect and error');
       this.once('connect', onConnect);
       this.once('error', onError);
     });
@@ -85,7 +90,7 @@ class AMI extends EventEmitter {
 
       this._reconnectTimeout = setTimeout(() => {
         delete this._reconnectTimeout;
-        this.connect();
+        this._connect();
       }, this._backoffTimeout);
     } else {
       this.emit('error', err);
