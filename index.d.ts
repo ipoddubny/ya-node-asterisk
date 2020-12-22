@@ -13,7 +13,7 @@ declare module 'yana' {
   type SendCallback = (err: Error | undefined | null, message: object) => void;
   type DisconnectCallback = (err: Error | undefined | null) => void;
 
-  declare export default class AMI extends EventEmitter {
+  export default class AMI extends EventEmitter {
     constructor(options: AMIOptions);
     connect(cb?: ConnectCallback): Promise<void>;
     send(action: object, cb?: SendCallback): Promise<object>;
