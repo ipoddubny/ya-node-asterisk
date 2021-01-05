@@ -7,6 +7,7 @@ declare module 'yana' {
     reconnect?: boolean;
     events?: string | boolean;
     login: string;
+    password?: string;
   }
 
   type ConnectCallback = (err: Error | undefined | null) => void;
