@@ -24,5 +24,8 @@
   },
   "scripts": {
     "test": "jest"
+  },
+  "optionalDependencies": {
+    "fsevents": "^2.3.2"
   }
 }
