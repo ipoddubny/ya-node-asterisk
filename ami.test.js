@@ -36,7 +36,7 @@ describe('AMI', () => {
     MLS.prototype.end.mockClear();
   });
 
-  test('connect and log in', async () => {
+  test('connect and log in', () => {
     const ami = makeAMI();
 
     MLS.expectAndRespondToAction(
@@ -49,7 +49,7 @@ describe('AMI', () => {
     expect(ami.connect()).resolves.toBe(undefined);
   });
 
-  test('connect and log in, boolean events', async () => {
+  test('connect and log in, boolean events', () => {
     const ami = makeAMI({events: true});
 
     MLS.expectAndRespondToAction(
@@ -62,7 +62,7 @@ describe('AMI', () => {
     expect(ami.connect()).resolves.toBe(undefined);
   });
 
-  test('connect and log in - with callback', async (done) => {
+  test('connect and log in - with callback', (done) => {
     const ami = makeAMI();
 
     MLS.expectAndRespondToAction(
@@ -72,12 +72,10 @@ describe('AMI', () => {
       ]
     );
 
-    ami.connect(() => {
-      done();
-    });
+    ami.connect(done);
   });
 
-  test('reconnect', async (done) => {
+  test('reconnect', async () => {
     const ami = await makeLoggedInAMI({reconnect: true});
 
     // this triggers a warning early on, but it's impossible to set a process.on('warning') in jest
@@ -101,11 +99,13 @@ describe('AMI', () => {
       ]
     );
 
-    ami.once('reconnect', () => {
-      expect(ami.rawListeners('connect')).toHaveLength(0);
-      expect(ami.rawListeners('error')).toHaveLength(0);
-      expect(MLS.prototype.connect).toHaveBeenCalledTimes(1 + FAILED_CONNECTIONS + 1);
-      done();
+    await new Promise((resolve, reject) => {
+      ami.once('reconnect', () => {
+        expect(ami.rawListeners('connect')).toHaveLength(0);
+        expect(ami.rawListeners('error')).toHaveLength(0);
+        expect(MLS.prototype.connect).toHaveBeenCalledTimes(1 + FAILED_CONNECTIONS + 1);
+        resolve();
+      });
     });
   });
 
@@ -122,7 +122,7 @@ describe('AMI', () => {
     expect(MLS.prototype.end).toHaveBeenCalled();
   });
 
-  test('disconnect - with callback', async (done) => {
+  test('disconnect - with callback', async () => {
     const ami = await makeLoggedInAMI();
     MLS.expectAndRespondToAction(
       /action: Logoff/,
@@ -132,20 +132,22 @@ describe('AMI', () => {
       ]
     );
 
-    ami.disconnect(err => {
-      expect(MLS.prototype.end).toHaveBeenCalled();
-      expect(err).toBeNull();
-      done();
+    await new Promise((resolve, reject) => {
+      ami.disconnect(err => {
+        expect(MLS.prototype.end).toHaveBeenCalled();
+        expect(err).toBeNull();
+        resolve();
+      });
     });
   });
 
-  test('disconnect when not connected', async () => {
+  test('disconnect when not connected', () => {
     const ami = makeAMI();
 
     expect(ami.disconnect()).rejects.toBeInstanceOf(Error);
   });
 
-  test('disconnect when not connected - with callback', async (done) => {
+  test('disconnect when not connected - with callback', (done) => {
     const ami = makeAMI();
     ami.disconnect(err => {
       expect(err).toBeInstanceOf(Error);
@@ -180,7 +182,7 @@ describe('AMI', () => {
       expect(res).toEqual(expect.objectContaining({response: 'Pong'}));
     });
 
-    test('send action and get a response - with callback', async (done) => {
+    test('send action and get a response - with callback', async () => {
       const ami = await makeLoggedInAMI();
       MLS.expectAndRespondToAction(
         /action: Ping/,
@@ -189,10 +191,12 @@ describe('AMI', () => {
         ]
       );
 
-      ami.send({action: 'Ping'}, (err, res) => {
-        expect(err).toBeNull();
-        expect(res).toEqual(expect.objectContaining({response: 'Pong'}));
-        done();
+      await new Promise((resolve, reject) => {
+        ami.send({action: 'Ping'}, (err, res) => {
+          expect(err).toBeNull();
+          expect(res).toEqual(expect.objectContaining({response: 'Pong'}));
+          resolve();
+        });
       });
     });
 
@@ -314,7 +318,7 @@ describe('AMI', () => {
   });
 
   describe('events', () => {
-    test('triggers "event" on any event', async (done) => {
+    test('triggers "event" on any event', async () => {
       const ami = await makeLoggedInAMI();
       const eventLines = [
         'Event: TestEvent',
@@ -323,14 +327,16 @@ describe('AMI', () => {
         ''
       ];
 
-      ami.on('event', ev => {
-        expect(ev).toEqual({event: 'TestEvent', key1: 'Value1', key2: 'Value2'});
-        done();
+      await new Promise((resolve, reject) => {
+        ami.on('event', ev => {
+          expect(ev).toEqual({event: 'TestEvent', key1: 'Value1', key2: 'Value2'});
+          resolve();
+        });
+        ami.socket.emitManyLines(eventLines);
       });
-      ami.socket.emitManyLines(eventLines);
     });
 
-    test('triggers <EventName> on EventName from asterisk', async (done) => {
+    test('triggers <EventName> on EventName from asterisk', async () => {
       const ami = await makeLoggedInAMI();
       const eventLines = [
         'Event: TestEvent',
@@ -339,14 +345,16 @@ describe('AMI', () => {
         ''
       ];
 
-      ami.on('TestEvent', ev => {
-        expect(ev).toEqual({event: 'TestEvent', key1: 'Value1', key2: 'Value2'});
-        done();
+      await new Promise((resolve, reject) => {
+        ami.on('TestEvent', ev => {
+          expect(ev).toEqual({event: 'TestEvent', key1: 'Value1', key2: 'Value2'});
+          resolve();
+        });
+        ami.socket.emitManyLines(eventLines);
       });
-      ami.socket.emitManyLines(eventLines);
     });
 
-    test('triggers <UserEvent-EventName> on UserEvent: EventName from asterisk', async (done) => {
+    test('triggers <UserEvent-EventName> on UserEvent: EventName from asterisk', async () => {
       const ami = await makeLoggedInAMI();
       const eventLines = [
         'Event: UserEvent',
@@ -355,11 +363,13 @@ describe('AMI', () => {
         ''
       ];
 
-      ami.on('UserEvent-TestUserEvent', ev => {
-        expect(ev).toEqual({event: 'UserEvent', userevent: 'TestUserEvent', hello: 'World'});
-        done();
+      await new Promise((resolve, reject) => {
+        ami.on('UserEvent-TestUserEvent', ev => {
+          expect(ev).toEqual({event: 'UserEvent', userevent: 'TestUserEvent', hello: 'World'});
+          resolve();
+        });
+        ami.socket.emitManyLines(eventLines);
       });
-      ami.socket.emitManyLines(eventLines);
     });
   });
 });
