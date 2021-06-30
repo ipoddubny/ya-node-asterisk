@@ -48,7 +48,8 @@ class AMI extends EventEmitter {
     });
 
     if (cb) {
-      promise.then(cb);
+      promise.catch(err => {}).then(cb);
+      return;
     }
 
     return promise;
@@ -255,6 +256,7 @@ class AMI extends EventEmitter {
       promise
         .catch(err => callback(err))
         .then(res => callback(null, res));
+      return;
     }
 
     return promise;
@@ -265,6 +267,7 @@ class AMI extends EventEmitter {
       if (typeof (callback) === 'function') {
         // don't do it immediately, never call callback on the same tick
         process.nextTick(() => callback(new Error('not connected')));
+        return;
       }
 
       return Promise.reject(new Error('not connected'));
