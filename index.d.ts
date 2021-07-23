@@ -10,14 +10,19 @@ declare module 'yana' {
     password?: string;
   }
 
+  interface ActionResult {
+    [key: string]: string | string[];
+    eventlist?: string | ActionResult[];
+  }
+
   type ConnectCallback = (err: Error | undefined | null) => void;
-  type SendCallback = (err: Error | undefined | null, message: object) => void;
+  type SendCallback = (err: Error | undefined | null, message: ActionResult) => void;
   type DisconnectCallback = (err: Error | undefined | null) => void;
 
   class AMI extends EventEmitter {
     constructor(options: AMIOptions);
     connect(cb?: ConnectCallback): Promise<void>;
-    send(action: object, cb?: SendCallback): Promise<object>;
+    send(action: object, cb?: SendCallback): Promise<ActionResult>;
     disconnect(cb?: DisconnectCallback): Promise<void>;
   }
 
