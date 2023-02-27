@@ -10,9 +10,8 @@ declare module 'yana' {
     password?: string;
   }
 
-  interface ActionResult {
-    [key: string]: string | string[];
-    eventlist?: string | ActionResult[];
+  type ActionResult = Record<string, string | string[]> & {
+      eventlist?: ActionResult[]
   }
 
   type ConnectCallback = (err: Error | undefined | null) => void;
