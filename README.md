@@ -5,7 +5,7 @@
 
 Yana is yet another node.js library for Asterisk Manager Interface.
 
-Supported Asterisk versions: all (tested mostly with Asterisk 11, 13 and 16).
+Supported Asterisk versions: all (tested with Asterisk 11-20).
 
 Supported node.js versions: 12+.
 
