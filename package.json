@@ -20,7 +20,7 @@
   "main": "ami.js",
   "license": "MIT",
   "devDependencies": {
-    "jest": "^27.0.6"
+    "jest": "^29.4.3"
   },
   "scripts": {
     "test": "jest"
