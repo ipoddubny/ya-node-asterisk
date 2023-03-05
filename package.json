@@ -18,6 +18,11 @@
   },
   "author": "Ivan Poddubny <ivan.poddubny@gmail.com>",
   "main": "ami.js",
+  "files": [
+    "ami.js",
+    "line-socket.js",
+    "index.d.ts"
+  ],
   "license": "MIT",
   "devDependencies": {
     "jest": "^29.4.3"
